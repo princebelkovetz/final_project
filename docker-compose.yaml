@@ -1,0 +1,139 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    networks:
+      - ml-scorer
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    depends_on:
+      - zookeeper
+    networks:
+      - ml-scorer
+    ports:
+      - "9095:9095"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9095
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false" 
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9095", "--list"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+  kafka-setup:
+    image: confluentinc/cp-kafka:7.3.0
+    depends_on:
+      kafka:
+        condition: service_started
+    networks:
+      - ml-scorer
+    restart: on-failure
+    entrypoint: ["/bin/bash", "-c"]
+    command: |
+      "
+      echo 'Waiting for Kafka...'
+      while ! kafka-topics --bootstrap-server kafka:9092 --list >/dev/null 2>&1; do sleep 1; done
+
+      echo 'Creating topics: flights, scoring'
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic flights --partitions 3 --replication-factor 1
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic scoring --partitions 3 --replication-factor 1
+
+      echo 'Topics ready.'
+      "
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    depends_on:
+      - kafka
+    networks:
+      - ml-scorer
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+
+
+  satisfaction_tracker:
+    build: ./satisfaction_tracker
+    networks:
+      - ml-scorer
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      KAFKA_FLIGHTS_TOPIC: "flights"
+      KAFKA_SCORING_TOPIC: "scoring"
+    depends_on:
+      - kafka
+      - kafka-setup
+
+  interface:
+    build: ./interface
+    networks:
+      - ml-scorer
+    ports:
+      - "8501:8501"
+    environment:
+      KAFKA_BROKERS: "kafka:9092"
+      KAFKA_TOPIC: "flights"
+      DB_HOST: "postgres"
+      DB_PORT: "5432"
+      DB_NAME: "satisfaction_db"
+      DB_USER: "satisfaction_user"
+      DB_PASSWORD: "satisfaction_pass"
+    depends_on:
+      - postgres
+      - kafka
+
+  postgres:
+    image: postgres:15
+    networks:
+      - ml-scorer
+    environment:
+      POSTGRES_DB: satisfaction_db
+      POSTGRES_USER: satisfaction_user
+      POSTGRES_PASSWORD: satisfaction_pass
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U satisfaction_user -d satisfaction_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  scoring-db-writer:
+    build: ./scoring_db_writer
+    networks:
+      - ml-scorer
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      KAFKA_SCORING_TOPIC: "scoring"
+      KAFKA_GROUP_ID: "scoring-db-writer"
+      DB_HOST: "postgres"
+      DB_PORT: "5432"
+      DB_NAME: "satisfaction_db"
+      DB_USER: "satisfaction_user"
+      DB_PASSWORD: "satisfaction_pass"
+    depends_on:
+      kafka:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+
+networks:
+  ml-scorer:
+    name: ml-scorer
+    driver: bridge

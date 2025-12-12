@@ -1,0 +1,11 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+logs/
+*.log
+satisfaction_tracker/research/catboost_info/
+.venv
+*.csv
+.DS_Store
