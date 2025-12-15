@@ -53,7 +53,7 @@ ML-система для прогнозирования удовлетворён
    docker compose up --build
    ```
 
-3. Загрузите файл `train.csv` из [соревнования](https://www.kaggle.com/datasets/teejmahal20/airline-passenger-satisfaction) и положите в папку /satisfaction_tracker/data/ через UI
+3. Загрузите файл `train.csv` из [соревнования](https://www.kaggle.com/datasets/teejmahal20/airline-passenger-satisfaction) и положите в папку /satisfaction_tracker/data/
 
 4. Откройте интерфейсы:
    - Streamlit UI: http://localhost:8501
