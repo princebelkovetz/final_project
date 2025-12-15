@@ -36,20 +36,21 @@ def create_table_if_not_exists(conn):
                 class TEXT,
                 customer_type TEXT,
                 type_of_travel TEXT,
+                age INTEGER,
                 timestamp TIMESTAMPTZ DEFAULT NOW()
             );
         """)
         conn.commit()
     logger.info("Ensured scoring_results table exists with all columns.")
-
+    
 def insert_record(conn, record):
     with conn.cursor() as cur:
         for row in record:
             cur.execute("""
                 INSERT INTO scoring_results (
                     id, score, satisfaction_flag,
-                    gender, class, customer_type, type_of_travel
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    gender, class, customer_type, type_of_travel, age
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (id) DO NOTHING;
             """, (
                 row.get("id"),
@@ -58,7 +59,8 @@ def insert_record(conn, record):
                 row.get("Gender"),
                 row.get("Class"),
                 row.get("Customer Type"),
-                row.get("Type of Travel")
+                row.get("Type of Travel"),
+                row.get("Age")
             ))
         conn.commit()
 
