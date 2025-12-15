@@ -80,7 +80,6 @@ ML-система для прогнозирования удовлетворён
 ├── satisfaction_tracker/   # Kafka-консюмер + ML-модель
 ├── interface/              # Streamlit UI
 ├── scoring_db_writer/      # Запись предсказаний в PostgreSQL
-└── docs/                   # Документация (архитектурная схема)
 ```
 
 ---
