@@ -48,12 +48,12 @@ ML-система для прогнозирования удовлетворён
    cd final_project
    ```
 
-2. Соберите и запустите:
-   ```bash
-   docker compose up --build
-   ```
+2. Загрузите файл `train.csv` из [соревнования](https://www.kaggle.com/datasets/teejmahal20/airline-passenger-satisfaction) и положите в папку /satisfaction_tracker/data/ 
 
-3. Загрузите файл `train.csv` из [соревнования](https://www.kaggle.com/datasets/teejmahal20/airline-passenger-satisfaction) и положите в папку /satisfaction_tracker/data/
+3. Соберите и запустите:
+```bash
+docker compose up --build
+```
 
 4. Откройте интерфейсы:
    - Streamlit UI: http://localhost:8501
